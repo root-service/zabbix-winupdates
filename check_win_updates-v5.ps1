@@ -18,8 +18,8 @@ $ZabbixConfFile = "$Env:Programdata\ZabbixAgent"
 
 # Change $reportpath to wherever you want your update reports to go.
 
-$reportpath = "$ZabbixInstallPath\WinUpdates"
-
+$reportpath = "$ZabbixInstallPath\scripts\WinUpdates"
+$tempPath = [System.IO.Path]::GetTempPath().TrimEnd('\')
 
 # Do not change the following variables unless you know what you are doing
 
@@ -35,21 +35,21 @@ $returnStateCritical = 2
 $returnStateUnknown = 3
 $returnStateOptionalUpdates = $returnStateWarning
 $Sender = "$ZabbixInstallPath\zabbix_sender.exe"
-$Senderarg1 = '-vv'
-$Senderarg2 = '-c'
-$Senderarg3 = "$ZabbixConfFile\zabbix_agentd.conf"
-$Senderarg4 = '-i'
-$SenderargUpdateReboot = '\updatereboot.txt'
-$Senderarglastupdated = '\lastupdated.txt'
-$Senderargcountcritical = '\countcritical.txt'
-$SenderargcountOptional = '\countOptional.txt'
-$SenderargcountHidden = '\countHidden.txt'
-$Countcriticalnum = '\countcriticalnum.txt'
-$Senderarg5 = '-k'
-$Senderargupdating = 'Winupdates.Updating'
-$Senderarg6 = '-o'
-$Senderarg7 = '0'
-$Senderarg8 = '1'
+$Verbose = '-vv'
+$Config = '-c'
+$ConfigPath = "$ZabbixConfFile\zabbix_agentd.conf"
+$InputFile = '-i'
+$SenderargUpdateReboot = 'updatereboot.txt'
+$Senderarglastupdated = 'lastupdated.txt'
+$Senderargcountcritical = 'countcritical.txt'
+$SenderargcountOptional = 'countOptional.txt'
+$SenderargcountHidden = 'countHidden.txt'
+$Countcriticalnum = 'countcriticalnum.txt'
+$KeyArg = '-k'
+$Updating = 'Winupdates.Updating'
+$ValueArg = '-o'
+$Zero = '0'
+$One = '1'
 
 
 If(!(test-path $reportpath))
@@ -62,17 +62,17 @@ If(!(test-path $reportpath))
 # ------------------------------------------------------------------------- #
 
 $windowsUpdateObject = New-Object -ComObject Microsoft.Update.AutoUpdate
-Write-Output "- Winupdates.LastUpdated $($windowsUpdateObject.Results.LastInstallationSuccessDate)" | Out-File -Encoding "ASCII" -FilePath $env:temp$Senderarglastupdated
+Write-Output "- Winupdates.LastUpdated $($windowsUpdateObject.Results.LastInstallationSuccessDate)" | Out-File -Encoding "ASCII" -FilePath $tempPath$Senderarglastupdated
 
 # ------------------------------------------------------------------------- #
 # This part get the reboot status and writes to test file
 # ------------------------------------------------------------------------- #
 
 if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"){ 
-	Write-Output "- Winupdates.Reboot 1" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargUpdateReboot
+	Write-Output "- Winupdates.Reboot 1" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargUpdateReboot"
     Write-Host "`t There is a reboot pending" -ForeGroundColor "Red"
 }else {
-	Write-Output "- Winupdates.Reboot 0" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargUpdateReboot
+	Write-Output "- Winupdates.Reboot 0" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargUpdateReboot"
     Write-Host "`t No reboot pending" -ForeGroundColor "Green"
 		}
 # ------------------------------------------------------------------------- #		
@@ -93,18 +93,18 @@ $countHidden = 0;
 
 if ($updates.Count -eq 0) {
 
-	$countCritical | Out-File -Encoding "ASCII" -FilePath $env:temp$Countcriticalnum
-	Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath $env:temp$Senderargcountcritical
-	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountOptional
-	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountHidden
+	$countCritical | Out-File -Encoding "ASCII" -FilePath "$tempPath\$Countcriticalnum"
+	Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$Senderargcountcritical"
+	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountOptional"
+	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountHidden"
     Write-Host "`t There are no pending updates" -ForeGroundColor "Green"
 	
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargUpdateReboot -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderarglastupdated -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderargcountcritical -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountOptional -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountHidden -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg5 $Senderargupdating $Senderarg6 $Senderarg7 -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargUpdateReboot" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$Senderarglastupdated" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$Senderargcountcritical" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargcountOptional" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargcountHidden" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $KeyArg $Updating $ValueArg $Zero -s "$env:computername"
 	
 	exit $returnStateOK
 }
@@ -131,20 +131,20 @@ foreach ($update in $updates) {
 
 if (($countCritical + $countOptional) -gt 0) {
 
-	$countCritical | Out-File -Encoding "ASCII" -FilePath $env:temp$Countcriticalnum
-	Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath $env:temp$Senderargcountcritical
-	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountOptional
-	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountHidden
+	$countCritical | Out-File -Encoding "ASCII" -FilePath "$tempPath\$Countcriticalnum"
+	Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$Senderargcountcritical"
+	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountOptional"
+	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountHidden"
     Write-Host "`t There are $($countCritical) critical updates available" -ForeGroundColor "Yellow"
     Write-Host "`t There are $($countOptional) optional updates available" -ForeGroundColor "Yellow"
     Write-Host "`t There are $($countHidden) hidden updates available" -ForeGroundColor "Yellow"
 	
-    & $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargUpdateReboot -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderarglastupdated -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderargcountcritical -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountOptional -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountHidden -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg5 $Senderargupdating $Senderarg6 $Senderarg7 -s "$env:computername"
+    & $Sender $Verbose $Config $ConfigPath $InputFile "$tempPat\$SenderargUpdateReboot" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPat\$Senderarglastupdated" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPat\$Senderargcountcritical" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPat\$SenderargcountOptional" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPat\$SenderargcountHidden" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $KeyArg $Updating $ValueArg $Zero -s "$env:computername"
 }   
 
 # ------------------------------------------------------------------------- #
@@ -153,7 +153,7 @@ if (($countCritical + $countOptional) -gt 0) {
 	
 if ($countCritical -gt 0 -Or $countOptional -gt 2) {
 		
-			& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg5 $Senderargupdating $Senderarg6 $Senderarg8
+			& $Sender $Verbose $Config $ConfigPath $KeyArg $Updating $ValueArg $One
 			$ErrorActionPreference = "SilentlyContinue"
 			
 			If ($Error) {
@@ -245,31 +245,31 @@ if ($countCritical -gt 0 -Or $countOptional -gt 2) {
 			}
 
 
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg5 $Senderargupdating $Senderarg6 $Senderarg7
+	& $Sender $Verbose $Config $ConfigPath $KeyArg $Updating $ValueArg $Zero
 
 
     if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"){ 
-	    Write-Output "- Winupdates.Reboot 1" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargUpdateReboot
+	    Write-Output "- Winupdates.Reboot 1" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargUpdateReboot"
         Write-Host "`t There is a reboot pending" -ForeGroundColor "Red"
     }else {
-	    Write-Output "- Winupdates.Reboot 0" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargUpdateReboot
+	    Write-Output "- Winupdates.Reboot 0" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargUpdateReboot"
         Write-Host "`t No reboot pending" -ForeGroundColor "Green"
 		    }
 
     $updates=$updateSession.CreateupdateSearcher().Search(("IsInstalled=0 and Type='Software'")).Updates
 
-    Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath $env:temp$Senderargcountcritical
-	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountOptional
-	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountHidden
+    Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$Senderargcountcritical"
+	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountOptional"
+	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountHidden"
     Write-Host "`t There are now $($countCritical) critical updates available" -ForeGroundColor "Yellow"
     Write-Host "`t There are now $($countOptional) optional updates available" -ForeGroundColor "Yellow"
     Write-Host "`t There are now $($countHidden) hidden updates available" -ForeGroundColor "Yellow"
 
-    & $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargUpdateReboot -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderarglastupdated -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderargcountcritical -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountOptional -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountHidden -s "$env:computername"
+    & $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargUpdateReboot" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$Senderarglastupdated" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$Senderargcountcritical" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargcountOptional" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargcountHidden" -s "$env:computername"
 
 	exit $returnStateCritical
 }
@@ -287,20 +287,20 @@ if ($countOptional -gt 0) {
 
 if ($countHidden -gt 0) {
 	
-	$countCritical | Out-File -Encoding "ASCII" -FilePath $env:temp$Countcriticalnum
-	Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath $env:temp$Senderargcountcritical
-	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountOptional
-	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath $env:temp$SenderargcountHidden
+	$countCritical | Out-File -Encoding "ASCII" -FilePath $tempPath$Countcriticalnum
+	Write-Output "- Winupdates.Critical $($countCritical)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$Senderargcountcritical"
+	Write-Output "- Winupdates.Optional $($countOptional)" | Out-File -Encoding "ASCII" -FilePath "$tempPath\$SenderargcountOptional"
+	Write-Output "- Winupdates.Hidden $($countHidden)" | Out-File -Encoding "ASCII" -FilePath $tempPath$SenderargcountHidden
     Write-Host "`t There are $($countCritical) critical updates available" -ForeGroundColor "Yellow"
     Write-Host "`t There are $($countOptional) optional updates available" -ForeGroundColor "Yellow"
     Write-Host "`t There are $($countHidden) hidden updates available" -ForeGroundColor "Yellow"
 	
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargUpdateReboot -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderarglastupdated -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$Senderargcountcritical -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountOptional -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg4 $env:temp$SenderargcountHidden -s "$env:computername"
-	& $Sender $Senderarg1 $Senderarg2 $Senderarg3 $Senderarg5 $Senderargupdating $Senderarg6 $Senderarg7 -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargUpdateReboot" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$Senderarglastupdated" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$Senderargcountcritical" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargcountOptional" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $InputFile "$tempPath\$SenderargcountHidden" -s "$env:computername"
+	& $Sender $Verbose $Config $ConfigPath $KeyArg $Updating $ValueArg $Zero -s "$env:computername"
 	
 	exit $returnStateOK
 }
