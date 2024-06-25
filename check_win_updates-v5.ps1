@@ -18,8 +18,8 @@ $reportpath = "C:\IT\WinUpdates"
 
 # Change $ZabbixInstallPath to wherever your Zabbix Agent is installed
 
-$ZabbixInstallPath = "$Env:Programfiles\Zabbix Agent"
-$ZabbixConfFile = "$Env:Programdata\zabbix"
+$ZabbixInstallPath = "$Env:Programdata\ZabbixAgent"
+$ZabbixConfFile = "$Env:Programdata\ZabbixAgent"
 
 # Do not change the following variables unless you know what you are doing
 
